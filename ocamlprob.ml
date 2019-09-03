@@ -43,7 +43,9 @@ let () =
     in
     let main f =
       try%lwt
-        Lwt_util.timely_loop ~immediate:true 1. f (*FIXME period*)
+        let config_check = Lwt_util.timely_loop ~immediate:true 1. f in (*FIXME period*)
+        let cache_update = Lwt_util.timely_loop 1. Config.update_cache in
+        Lwt.join [cache_update; config_check]
       with Daemon.ShouldExit -> Lwt.return_unit
     in
     Lwt_main.run @@ main config_check
