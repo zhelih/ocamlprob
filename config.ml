@@ -4,7 +4,7 @@ open Devkit
 
 let log = Log.from "config"
 
-type comm = Email of string list | Sms of string list | Command of string
+type comm = Email of string list | Phone of string list | Command of string
 type task = Pid of int | Name of string
 type report = {
   c : comm;
@@ -16,9 +16,18 @@ type config = report list
 
 let cache = Hashtbl.create 1
 
-let parse _filename : config =
-(*   let json = Yojson.from_file filename in *)
-  []
+let parse filename : config =
+  try
+    let json = Yojson.Basic.from_file filename in
+    let open Yojson.Basic.Util in
+    let _comms = json |> member "config" |> member "comms" |> to_assoc |> List.map (fun name j ->
+      let get_maybe_null str j = if j == `Null then [] else filter_string @@ to_list @@ member str j in
+      let emails = get_maybe_null "emails" j in
+      let phones = get_maybe_null "phones" j in
+      name, emails, phones
+    ) in
+    []
+  with exn -> log #warn ~exn "Error"; []
 
 let notdigit = function '0'..'9' -> false | _ -> true
 let isnum s =
