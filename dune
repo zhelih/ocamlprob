@@ -1,4 +1,4 @@
 (executable
   (name ocamlprob)
-  (libraries devkit lwt.unix yojson)
-  (preprocess (pps lwt_ppx)))
+  (libraries devkit lwt.unix yojson ppx_deriving)
+  (preprocess (pps lwt_ppx ppx_deriving.std)))

@@ -4,15 +4,15 @@ open Devkit
 
 let log = Log.from "config"
 
-type comm = Email of string list | Phone of string list | Command of string
-type task = Pid of int | Name of string
-type report = {
-  c : comm;
-  t : task;
+type comm = Email of string | Phone of string | Command of string [@@deriving show {with_path = false}]
+type proc = Pid of int | Name of string [@@deriving show {with_path = false}]
+type task = {
+  c : comm list;
+  p : proc;
   period : int;
-}
+} [@@deriving show {with_path = false}]
 
-type config = report list
+type config = task list [@@deriving show {with_path = false}]
 
 let cache = Hashtbl.create 1
 
@@ -20,13 +20,28 @@ let parse filename : config =
   try
     let json = Yojson.Basic.from_file filename in
     let open Yojson.Basic.Util in
-    let _comms = json |> member "config" |> member "comms" |> to_assoc |> List.map (fun name j ->
-      let get_maybe_null str j = if j == `Null then [] else filter_string @@ to_list @@ member str j in
+    let json = member "config" json in
+    let comms = json |> member "comms" |> to_assoc |> List.map (fun (name, j) ->
+      let get_maybe_null str j = if j == `Null || `Null = member str j then [] else filter_string @@ to_list @@ member str j in
       let emails = get_maybe_null "emails" j in
       let phones = get_maybe_null "phones" j in
-      name, emails, phones
+      let cmds   = get_maybe_null "cmds"   j in
+      let all = [ List.map (fun e -> Email e) emails; List.map (fun p -> Phone p) phones; List.map (fun c -> Command c) cmds ] in
+      let all = List.concat all in
+      name, all
     ) in
-    []
+    json |> member "tasks" |> to_list |> List.map (fun j ->
+      let period = j |> member "period" |> to_int in
+      let comm = j |> member "comm" |> to_string in
+      let c = try List.assoc comm comms with _ -> Exn.fail "unknown comm %S" comm in
+      let p = match member "name" j, member "pid" j with
+      | `Null, `Null -> Exn.fail "Missing name/task (comm = %s, period = %d)" comm period
+      | `Null, p -> Pid (to_int p)
+      | n, `Null -> Name (to_string n)
+      | _, _ -> Exn.fail "Malformed task" (*TODO more details? *)
+      in
+      { c; p; period }
+    )
   with exn -> log #warn ~exn "Error"; []
 
 let notdigit = function '0'..'9' -> false | _ -> true
