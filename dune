@@ -1,4 +1,4 @@
 (executable
   (name ocamlprob)
-  (libraries devkit lwt.unix yojson ppx_deriving)
+  (libraries devkit lwt.unix yojson ppx_deriving core_kernel async async_smtp)
   (preprocess (pps lwt_ppx ppx_deriving.std)))

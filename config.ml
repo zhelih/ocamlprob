@@ -52,6 +52,7 @@ let isnum s =
   with Exit -> false
 
 let update_cache () =
+  if Sys.win32 then raise (Failure "Cannot build name cache with Windows flag on"); (*TODO*)
   Hashtbl.clear cache;
   let root = "/proc" in
   let%lwt () = Lwt_unix.files_of_directory root |>
@@ -73,5 +74,4 @@ let check_task t =
   match t with
   | Pid p -> (try Unix.kill p 0; true with _ -> false)
   | Name n -> begin
-    if Sys.win32 then raise (Failure "Cannot find proc by name with Windows flag on");
     try Hashtbl.iter (fun k _ -> if String.exists k n then raise Exit) cache; false with Exit -> true end
