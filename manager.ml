@@ -16,7 +16,11 @@ let send_email is_running proc email =
   Simplemail.send
   ~to_:[Email_address.of_string_exn email]
   ~subject:"Ocamlprob Alert"
-  (Simplemail.Content.text @@ Printf.sprintf "ALERT: Ocamlprob detected task %s %s." (Config.show_proc proc) (if is_running then "RUNNING" else "STOPPED") ) end;
+  (Simplemail.Content.text @@ Printf.sprintf "ALERT: Host %s : Ocamlprob detected task %s %s."
+      (Unix.gethostname ())
+      (Config.show_proc proc)
+      (if is_running then "RUNNING" else "STOPPED") )
+  end;
   Lwt.return_unit
 
 let send_report is_running proc comm =
